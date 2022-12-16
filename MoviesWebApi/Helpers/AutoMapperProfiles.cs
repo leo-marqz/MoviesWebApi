@@ -11,6 +11,10 @@ namespace MoviesWebApi.Helpers
             CreateMap<Genre, DisplayGenre>().ReverseMap();
             CreateMap<CreateGenre, Genre>();
             CreateMap<UpdateGenre, Genre>();
+
+            CreateMap<Author, DisplayAuthor>().ReverseMap();
+            CreateMap<CreateAuthor, Author>();
+            CreateMap<UpdateAuthor, Author>();
         }
     }
 }
