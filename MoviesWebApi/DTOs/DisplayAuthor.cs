@@ -1,8 +1,8 @@
 ﻿using System.ComponentModel.DataAnnotations;
 
-namespace MoviesWebApi.Entities
+namespace MoviesWebApi.DTOs
 {
-    public class Author
+    public class DisplayAuthor
     {
         public int Id { get; set; }
         [Required]
