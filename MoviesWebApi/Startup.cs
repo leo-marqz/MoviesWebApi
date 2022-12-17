@@ -22,7 +22,7 @@ namespace MoviesWebApi
             {
                 options.UseSqlServer(Configuration.GetConnectionString("defaultConnection"));
             });
-            services.AddControllers();
+            services.AddControllers().AddNewtonsoftJson();
             services.AddEndpointsApiExplorer();
 
         }

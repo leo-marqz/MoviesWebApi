@@ -1,4 +1,6 @@
 ﻿using AutoMapper;
+using Azure;
+using Microsoft.AspNetCore.JsonPatch;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using MoviesWebApi.DTOs;
@@ -63,8 +65,8 @@ namespace MoviesWebApi.Controllers
             return new CreatedAtRouteResult("getAuthor", new { id = author.Id }, author);
         }
 
-        [HttpPut("id:int", Name = "updateAuthor")]
-        public async Task<ActionResult> Put([FromRoute] int id, [FromBody] UpdateAuthor updateAuthor)
+        [HttpPut("{id:int}", Name = "updateAuthor")]
+        public async Task<ActionResult> Put([FromRoute] int id, [FromForm] UpdateAuthor updateAuthor)
         {
             //var exist = await context.Authors.AnyAsync(x => x.Id == id);
             var authorDB = await context.Authors.FirstOrDefaultAsync(x => x.Id == id);
@@ -81,6 +83,24 @@ namespace MoviesWebApi.Controllers
                         .EditFile(content, extension, container, authorDB.Photo, updateAuthor.Photo.ContentType);
                 }
             }
+            await context.SaveChangesAsync();
+            return NoContent();
+        }
+
+        [HttpPatch("{id:int}", Name = "patchAuthor")]
+        public async Task<ActionResult> Patch([FromRoute] int id, [FromBody] JsonPatchDocument<PatchAuthor> jsonPatchDocument)
+        {
+            if (jsonPatchDocument == null) return BadRequest();
+            var authorDB = await context.Authors.FirstOrDefaultAsync(x => x.Id == id);
+            if (authorDB is null) return NotFound();
+            var patchAuthor = mapper.Map<PatchAuthor>(authorDB);
+            jsonPatchDocument.ApplyTo(patchAuthor, ModelState);
+            var isValid = TryValidateModel(patchAuthor);
+            if(!isValid)
+            {
+                return BadRequest(ModelState);
+            }
+            mapper.Map(patchAuthor, authorDB);
             await context.SaveChangesAsync();
             return NoContent();
         }
