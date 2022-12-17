@@ -15,7 +15,8 @@ namespace MoviesWebApi
         public void ConfigureServices(IServiceCollection services)
         {
             services.AddAutoMapper(typeof(Startup));
-            services.AddTransient<IFileStorage, AzureFileStorage>();
+            //services.AddTransient<IFileStorage, AzureFileStorage>();
+
             services.AddDbContext<ApplicationDbContext>(options =>
             {
                 options.UseSqlServer(Configuration.GetConnectionString("defaultConnection"));

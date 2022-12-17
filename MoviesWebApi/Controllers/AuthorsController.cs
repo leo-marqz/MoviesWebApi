@@ -3,6 +3,8 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using MoviesWebApi.DTOs;
 using MoviesWebApi.Entities;
+using MoviesWebApi.Migrations;
+using MoviesWebApi.Services;
 
 namespace MoviesWebApi.Controllers
 {
@@ -12,11 +14,14 @@ namespace MoviesWebApi.Controllers
     {
         private readonly ApplicationDbContext context;
         private readonly IMapper mapper;
+        private readonly IFileStorage fileStorage;
+        private readonly string container = "authors";
 
-        public AuthorsController(ApplicationDbContext context, IMapper mapper)
+        public AuthorsController(ApplicationDbContext context, IMapper mapper, IFileStorage fileStorage)
         {
             this.context = context;
             this.mapper = mapper;
+            this.fileStorage = fileStorage;
         }
 
 
@@ -42,6 +47,17 @@ namespace MoviesWebApi.Controllers
         public async Task<ActionResult> Post([FromForm] CreateAuthor createAuthor)
         {
             var author = mapper.Map<Author>(createAuthor);
+            if(createAuthor.Photo != null)
+            {
+                using(var memoryStream = new MemoryStream())
+                {
+                    await createAuthor.Photo.CopyToAsync(memoryStream);
+                    var content = memoryStream.ToArray();
+                    var extension = Path.GetExtension(createAuthor.Photo.FileName);
+                    author.Photo = await fileStorage
+                        .SaveFile(content, extension, container, createAuthor.Photo.ContentType);
+                }
+            }
             context.Add(author);
             await context.SaveChangesAsync();
             return new CreatedAtRouteResult("getAuthor", new { id = author.Id }, author);
@@ -50,14 +66,21 @@ namespace MoviesWebApi.Controllers
         [HttpPut("id:int", Name = "updateAuthor")]
         public async Task<ActionResult> Put([FromRoute] int id, [FromBody] UpdateAuthor updateAuthor)
         {
-            var exist = await context.Authors.AnyAsync(x => x.Id == id);
-            if(!exist)
+            //var exist = await context.Authors.AnyAsync(x => x.Id == id);
+            var authorDB = await context.Authors.FirstOrDefaultAsync(x => x.Id == id);
+            if(authorDB is null) return NotFound();
+            authorDB = mapper.Map(updateAuthor, authorDB);
+            if (updateAuthor.Photo != null)
             {
-                return NotFound();
+                using (var memoryStream = new MemoryStream())
+                {
+                    await updateAuthor.Photo.CopyToAsync(memoryStream);
+                    var content = memoryStream.ToArray();
+                    var extension = Path.GetExtension(updateAuthor.Photo.FileName);
+                    authorDB.Photo = await fileStorage
+                        .EditFile(content, extension, container, authorDB.Photo, updateAuthor.Photo.ContentType);
+                }
             }
-            var author = mapper.Map<Author>(updateAuthor);
-            author.Id = id;
-            context.Entry(author).State = EntityState.Modified;
             await context.SaveChangesAsync();
             return NoContent();
         }
