@@ -16,7 +16,8 @@ namespace MoviesWebApi
         {
             services.AddAutoMapper(typeof(Startup));
             //services.AddTransient<IFileStorage, AzureFileStorage>();
-
+            services.AddTransient<IFileStorage, LocalFileStorage>();
+            services.AddHttpContextAccessor();
             services.AddDbContext<ApplicationDbContext>(options =>
             {
                 options.UseSqlServer(Configuration.GetConnectionString("defaultConnection"));
@@ -34,6 +35,7 @@ namespace MoviesWebApi
             }
 
             app.UseHttpsRedirection();
+            app.UseStaticFiles(); //permite servir archivos estaticos como imagenes
             app.UseRouting();
             app.UseAuthorization();
             app.UseEndpoints(endpoints =>
