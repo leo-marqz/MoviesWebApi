@@ -4,9 +4,11 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using MoviesWebApi.DTOs;
 using MoviesWebApi.Entities;
+using MoviesWebApi.Helpers;
 using MoviesWebApi.Migrations;
 using MoviesWebApi.Services;
 using System.ComponentModel;
+using System.Linq.Dynamic.Core;
 
 namespace MoviesWebApi.Controllers
 {
@@ -17,28 +19,93 @@ namespace MoviesWebApi.Controllers
         private readonly ApplicationDbContext context;
         private readonly IMapper mapper;
         private readonly IFileStorage fileStorage;
+        private readonly ILogger logger;
         private readonly string container = "movies";
 
-        public MoviesController(ApplicationDbContext context, IMapper mapper, IFileStorage fileStorage)
+        public MoviesController(ApplicationDbContext context, IMapper mapper, IFileStorage fileStorage, ILogger logger)
         {
             this.context = context;
             this.mapper = mapper;
             this.fileStorage = fileStorage;
+            this.logger = logger;
         }
 
         [HttpGet(Name = "getMovies")]
-        public async Task<ActionResult<List<DisplayMovie>>> Get()
+        public async Task<ActionResult<TopMoviesList>> Get()
         {
-            var movies = await context.Movies.ToListAsync();
+            var top = 5;
+            var today = DateTime.Today;
+            var nextReleases = await context.Movies
+                .Where(x => x.ReleaseDate > today)
+                .OrderBy(x => x.ReleaseDate)
+                .Take(top)
+                .ToListAsync();
+            var inCinemas = await context.Movies
+                .Where(x => x.InCinemas)
+                .Take(top)
+                .ToListAsync();
+
+            var result = new TopMoviesList();
+            result.FutureReleases = mapper.Map<List<DisplayMovie>>(nextReleases);
+            result.InCinemas = mapper.Map<List<DisplayMovie>>(inCinemas);
+            return result;
+        }
+
+        [HttpGet("filter")]
+        public async Task<ActionResult<List<DisplayMovie>>> Filter([FromQuery] MovieFilter movieFilter)
+        {
+            var moviesQueryable = context.Movies.AsQueryable();
+            if(!string.IsNullOrEmpty(movieFilter.Title))
+            {
+                moviesQueryable = moviesQueryable
+                    .Where(x => x.Title.Contains(movieFilter.Title));
+            }
+            if(movieFilter.InCinemas)
+            {
+                moviesQueryable = moviesQueryable
+                    .Where(x => x.InCinemas);
+            }
+            if(movieFilter.NextReleases)
+            {
+                moviesQueryable = moviesQueryable
+                    .Where(x => x.ReleaseDate > DateTime.Today);
+            }
+            if(movieFilter.GenreId != 0)
+            {
+                moviesQueryable = moviesQueryable
+                    .Where(x => x.MoviesGenres.Select(y => y.GenreId)
+                    .Contains(movieFilter.GenreId));
+            }
+            if(!string.IsNullOrEmpty(movieFilter.FieldSort))
+            {
+                if(movieFilter.FieldSort == "title")
+                {
+                    var orderType = movieFilter.AscendingOrder ? "ascending" : "descending";
+                    try
+                    {
+                        moviesQueryable = moviesQueryable.OrderBy($"{movieFilter.FieldSort} {orderType}");
+                    }catch(Exception ex)
+                    {
+                        logger.LogError(ex.Message, ex);
+                    }
+                }
+            }
+            await HttpContext
+                .InsertPaginationParameters(moviesQueryable, movieFilter.recordsPerPage);
+            var movies = await moviesQueryable.Page(movieFilter.Pagination).ToListAsync();
             return mapper.Map<List<DisplayMovie>>(movies);
         }
 
         [HttpGet("{id:int}", Name = "getMovie")]
-        public async Task<ActionResult<DisplayMovie>> Get([FromRoute] int id)
+        public async Task<ActionResult<DetailsOfMovies>> Get([FromRoute] int id)
         {
-            var movie = await context.Movies.FirstOrDefaultAsync(x => x.Id == id);
+            var movie = await context.Movies
+                .Include(x=>x.MoviesAuthors).ThenInclude(x=> x.Author)
+                .Include(x=>x.MoviesGenres).ThenInclude(x=> x.Genre)
+                .FirstOrDefaultAsync(x => x.Id == id);
             if (movie is null) return NotFound();
-            return mapper.Map<DisplayMovie>(movie);
+            movie.MoviesAuthors = movie.MoviesAuthors.OrderBy(x => x.Order).ToList();
+            return mapper.Map<DetailsOfMovies>(movie);
         }
 
         [HttpPost(Name = "createMovie")]
@@ -56,6 +123,7 @@ namespace MoviesWebApi.Controllers
                         .SaveFile(content, extension, container, createMovie.Poster.ContentType);
                 }
             }
+            AssignAuthorsOrderInTheMovie(movie);
             context.Add(movie);
             await context.SaveChangesAsync();
             var movieDTO = mapper.Map<DisplayMovie>(movie);
@@ -65,7 +133,10 @@ namespace MoviesWebApi.Controllers
         [HttpPut("{id:int}", Name = "updateMovie")]
         public async Task<ActionResult> Put([FromRoute] int id, [FromForm] UpdateMovie updateMovie)
         {
-            var movieDB = await context.Movies.FirstOrDefaultAsync(x => x.Id == id);
+            var movieDB = await context.Movies
+                .Include(x=>x.MoviesGenres)
+                .Include(x=>x.MoviesAuthors)
+                .FirstOrDefaultAsync(x => x.Id == id);
             if (movieDB is null) return NotFound();
             movieDB = mapper.Map(updateMovie, movieDB);
             if (updateMovie.Poster != null)
@@ -79,6 +150,7 @@ namespace MoviesWebApi.Controllers
                         .EditFile(content, extension, container, movieDB.Poster, updateMovie.Poster.ContentType);
                 }
             }
+            AssignAuthorsOrderInTheMovie(movieDB);
             await context.SaveChangesAsync();
             return NoContent();
         }
@@ -112,6 +184,17 @@ namespace MoviesWebApi.Controllers
             context.Remove(new Movie { Id = id });
             await context.SaveChangesAsync();
             return NoContent();
+        }
+
+        private void AssignAuthorsOrderInTheMovie(Movie movie)
+        {
+            if(movie.MoviesAuthors != null)
+            {
+                for (int i = 0; i < movie.MoviesAuthors.Count; i++)
+                {
+                    movie.MoviesAuthors[i].Order = i;
+                }
+            }
         }
     }
 }
