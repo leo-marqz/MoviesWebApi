@@ -16,6 +16,11 @@ namespace MoviesWebApi.Helpers
             CreateMap<CreateAuthor, Author>();
             CreateMap<UpdateAuthor, Author>().ForMember(x => x.Photo, options => options.Ignore());
             CreateMap<PatchAuthor, Author>().ReverseMap();
+
+            CreateMap<Movie, DisplayMovie>();
+            CreateMap<CreateMovie, Movie>().ForMember(x => x.Poster, options => options.Ignore());
+            CreateMap<UpdateMovie, Movie>();
+            CreateMap<Movie, PatchMovie>().ReverseMap();
         }
     }
 }
