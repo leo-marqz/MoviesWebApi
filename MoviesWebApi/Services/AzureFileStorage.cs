@@ -21,13 +21,22 @@ namespace MoviesWebApi.Services
             await blob.DeleteIfExistsAsync();
         }
 
-        public async Task<string> EditFile(byte[] content, string extension, string container, string path, string contentType)
+        public async Task<string> EditFile(
+            byte[] content, 
+            string extension, 
+            string container, 
+            string path, 
+            string contentType)
         {
             await DeleteFile(path, container);
             return await SaveFile(content, extension, container, contentType);
         }
 
-        public async Task<string> SaveFile(byte[] content, string extension, string container, string contentType)
+        public async Task<string> SaveFile(
+            byte[] content, 
+            string extension, 
+            string container, 
+            string contentType)
         {
             var client = new BlobContainerClient(connectionString, container);
             await client.CreateIfNotExistsAsync();

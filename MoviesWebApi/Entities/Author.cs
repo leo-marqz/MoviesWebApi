@@ -2,7 +2,7 @@
 
 namespace MoviesWebApi.Entities
 {
-    public class Author
+    public class Author : IId
     {
         public int Id { get; set; }
         [Required]

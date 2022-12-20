@@ -13,7 +13,7 @@ namespace MoviesWebApi.Controllers
 {
     [ApiController]
     [Route("api/authors")]
-    public class AuthorsController : ControllerBase
+    public class AuthorsController : CustomBaseController
     {
         private readonly ApplicationDbContext context;
         private readonly IMapper mapper;
@@ -21,6 +21,7 @@ namespace MoviesWebApi.Controllers
         private readonly string container = "authors";
 
         public AuthorsController(ApplicationDbContext context, IMapper mapper, IFileStorage fileStorage)
+            : base(context, mapper)
         {
             this.context = context;
             this.mapper = mapper;
@@ -31,22 +32,13 @@ namespace MoviesWebApi.Controllers
         [HttpGet(Name = "getAuthors")]
         public async Task<ActionResult<List<DisplayAuthor>>> Get([FromQuery] Pagination pagination)
         {
-            var queryable = context.Authors.AsQueryable();
-            await HttpContext.InsertPaginationParameters(queryable, pagination.recordsPerPage);
-
-            var authors = await queryable.Page(pagination).ToListAsync();
-            return mapper.Map<List<DisplayAuthor>>(authors);
+            return await Get<Author, DisplayAuthor>(pagination);
         }
 
         [HttpGet("{id:int}", Name = "getAuthor")]
         public async Task<ActionResult<DisplayAuthor>> Get([FromRoute] int id)
         {
-            var author = await context.Authors.FirstOrDefaultAsync(x => x.Id == id);
-            if(author is null)
-            {
-                return NotFound();
-            }
-            return mapper.Map<DisplayAuthor>(author);
+            return await Get<Author, DisplayAuthor>(id);
         }
 
         [HttpPost(Name = "createAuthor")]
@@ -94,32 +86,13 @@ namespace MoviesWebApi.Controllers
         [HttpPatch("{id:int}", Name = "patchAuthor")]
         public async Task<ActionResult> Patch([FromRoute] int id, [FromBody] JsonPatchDocument<PatchAuthor> jsonPatchDocument)
         {
-            if (jsonPatchDocument == null) return BadRequest();
-            var authorDB = await context.Authors.FirstOrDefaultAsync(x => x.Id == id);
-            if (authorDB is null) return NotFound();
-            var patchAuthor = mapper.Map<PatchAuthor>(authorDB);
-            jsonPatchDocument.ApplyTo(patchAuthor, ModelState);
-            var isValid = TryValidateModel(patchAuthor);
-            if(!isValid)
-            {
-                return BadRequest(ModelState);
-            }
-            mapper.Map(patchAuthor, authorDB);
-            await context.SaveChangesAsync();
-            return NoContent();
+            return await Patch<Author, PatchAuthor>(id, jsonPatchDocument);
         }
 
         [HttpDelete("{id:int}")]
         public async Task<ActionResult> Delete([FromRoute] int id)
         {
-            var exist = await context.Authors.AnyAsync(x => x.Id == id);
-            if(!exist)
-            {
-                return NotFound();
-            }
-            context.Remove(new Author { Id = id });
-            await context.SaveChangesAsync();
-            return NoContent();
+            return await Delete<Author>(id);
         }
      
     }

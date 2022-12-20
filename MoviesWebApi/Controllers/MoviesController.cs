@@ -14,7 +14,7 @@ namespace MoviesWebApi.Controllers
 {
     [ApiController]
     [Route("api/movies")]
-    public class MoviesController : ControllerBase
+    public class MoviesController : CustomBaseController
     {
         private readonly ApplicationDbContext context;
         private readonly IMapper mapper;
@@ -23,6 +23,7 @@ namespace MoviesWebApi.Controllers
         private readonly string container = "movies";
 
         public MoviesController(ApplicationDbContext context, IMapper mapper, IFileStorage fileStorage, ILogger logger)
+        :base(context, mapper)
         {
             this.context = context;
             this.mapper = mapper;
@@ -158,32 +159,13 @@ namespace MoviesWebApi.Controllers
         [HttpPatch("{id:int}", Name = "patchMovie")]
         public async Task<ActionResult> Patch([FromRoute] int id, [FromBody] JsonPatchDocument<PatchMovie> jsonPatchDocument)
         {
-            if (jsonPatchDocument == null) return BadRequest();
-            var movieDB = await context.Movies.FirstOrDefaultAsync(x => x.Id == id);
-            if (movieDB is null) return NotFound();
-            var patchMovie = mapper.Map<PatchMovie>(movieDB);
-            jsonPatchDocument.ApplyTo(patchMovie, ModelState);
-            var isValid = TryValidateModel(patchMovie);
-            if (!isValid)
-            {
-                return BadRequest(ModelState);
-            }
-            mapper.Map(patchMovie, movieDB);
-            await context.SaveChangesAsync();
-            return NoContent();
+            return await Patch<Movie, PatchMovie>(id, jsonPatchDocument);
         }
 
         [HttpDelete("{id:int}")]
         public async Task<ActionResult> Delete([FromRoute] int id)
         {
-            var exist = await context.Movies.AnyAsync(x => x.Id == id);
-            if (!exist)
-            {
-                return NotFound();
-            }
-            context.Remove(new Movie { Id = id });
-            await context.SaveChangesAsync();
-            return NoContent();
+            return await Delete<Movie>(id);
         }
 
         private void AssignAuthorsOrderInTheMovie(Movie movie)
