@@ -14,5 +14,6 @@ namespace MoviesWebApi.Entities
         //--------------------------------
         public List<MoviesAuthors> MoviesAuthors { get; set; }
         public List<MoviesGenres> MoviesGenres { get; set; }
+        public List<MoviesCinemas> MoviesCinemas { get; set; }
     }
 }
