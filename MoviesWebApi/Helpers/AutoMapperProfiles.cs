@@ -1,17 +1,41 @@
 ﻿using AutoMapper;
 using MoviesWebApi.DTOs;
 using MoviesWebApi.Entities;
+using NetTopologySuite;
+using NetTopologySuite.Geometries;
 
 namespace MoviesWebApi.Helpers
 {
     public class AutoMapperProfiles : Profile
     {
-        public AutoMapperProfiles()
+        public AutoMapperProfiles(GeometryFactory geometryFactory)
         {
             CreateMap<Genre, DisplayGenre>()
                 .ReverseMap();
             CreateMap<CreateGenre, Genre>();
             CreateMap<UpdateGenre, Genre>();
+
+            //var geometryFactory = NtsGeometryServices.Instance.CreateGeometryFactory(srid: 4326);
+            CreateMap<Cinema, DisplayCinema>()
+                .ForMember(x => x.Latitude, options => options.MapFrom(y => y.Location.Y))
+                .ForMember(x => x.Longitude, options => options.MapFrom(x => x.Location.X));
+
+            CreateMap<DisplayCinema, Cinema>()
+                .ForMember(x => x.Location, options => options.MapFrom(
+                    coordinates => geometryFactory
+                    .CreatePoint(new Coordinate(coordinates.Longitude, coordinates.Latitude))
+                    ));
+
+            CreateMap<CreateCinema, Cinema>()
+                .ForMember(x => x.Location, options => options.MapFrom(
+                    coordinates => geometryFactory
+                    .CreatePoint(new Coordinate(coordinates.Longitude, coordinates.Latitude))
+                    ));
+            CreateMap<UpdateCinema, Cinema>()
+                .ForMember(x => x.Location, options => options.MapFrom(
+                    coordinates => geometryFactory
+                    .CreatePoint(new Coordinate(coordinates.Longitude, coordinates.Latitude))
+                    ));
 
             CreateMap<Author, DisplayAuthor>()
                 .ReverseMap();

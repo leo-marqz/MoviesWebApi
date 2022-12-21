@@ -72,7 +72,7 @@ namespace MoviesWebApi.Controllers
         protected async Task<ActionResult> Put<TUpdate, TEntity>(int id, TUpdate update)
             where TEntity : class, IId
         {
-            var entity = mapper.Map<Genre>(update);
+            var entity = mapper.Map<TEntity>(update);
             entity.Id = id;
             context.Entry(entity).State = EntityState.Modified;
             await context.SaveChangesAsync();

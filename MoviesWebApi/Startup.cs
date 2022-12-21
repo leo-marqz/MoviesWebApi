@@ -1,5 +1,9 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using AutoMapper;
+using Microsoft.EntityFrameworkCore;
+using MoviesWebApi.Helpers;
 using MoviesWebApi.Services;
+using NetTopologySuite;
+using NetTopologySuite.Geometries;
 
 namespace MoviesWebApi
 {
@@ -18,9 +22,21 @@ namespace MoviesWebApi
             //services.AddTransient<IFileStorage, AzureFileStorage>();
             services.AddTransient<IFileStorage, LocalFileStorage>();
             services.AddHttpContextAccessor();
+            services.AddSingleton<GeometryFactory>(NtsGeometryServices.Instance.CreateGeometryFactory(srid: 4326));
+            services.AddSingleton(provider =>
+                new MapperConfiguration(config =>
+                {
+                    var geometryFactory = provider.GetRequiredService<GeometryFactory>();
+                    config.AddProfile(new AutoMapperProfiles(geometryFactory));
+
+                }).CreateMapper()
+            );
+
             services.AddDbContext<ApplicationDbContext>(options =>
             {
-                options.UseSqlServer(Configuration.GetConnectionString("defaultConnection"));
+                options.UseSqlServer(Configuration.GetConnectionString("defaultConnection"), 
+                    slqServerOptions => slqServerOptions.UseNetTopologySuite()
+                    );
             });
             services.AddControllers().AddNewtonsoftJson();
             services.AddEndpointsApiExplorer();
