@@ -43,6 +43,16 @@ namespace MoviesWebApi.Controllers
             var entities = await queryable.Page(pagination).ToListAsync();
             return mapper.Map<List<TRead>>(entities);
         }
+        
+        protected async Task<List<TRead>> Get<TEntity, TRead>(Pagination pagination, IQueryable<TEntity> queryable)
+            where TEntity : class
+        {
+            //var queryable = context.Set<TEntity>().AsQueryable();
+            await HttpContext.InsertPaginationParameters(queryable, pagination.recordsPerPage);
+
+            var entities = await queryable.Page(pagination).ToListAsync();
+            return mapper.Map<List<TRead>>(entities);
+        }
 
         protected async Task<ActionResult<TRead>> Get<TEntity, TRead>(int id) 
             where TEntity : class, IId

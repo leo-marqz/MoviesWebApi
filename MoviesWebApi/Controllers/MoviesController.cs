@@ -19,10 +19,10 @@ namespace MoviesWebApi.Controllers
         private readonly ApplicationDbContext context;
         private readonly IMapper mapper;
         private readonly IFileStorage fileStorage;
-        private readonly ILogger logger;
+        private readonly ILogger<MoviesController> logger;
         private readonly string container = "movies";
 
-        public MoviesController(ApplicationDbContext context, IMapper mapper, IFileStorage fileStorage, ILogger logger)
+        public MoviesController(ApplicationDbContext context, IMapper mapper, IFileStorage fileStorage, ILogger<MoviesController> logger)
         :base(context, mapper)
         {
             this.context = context;

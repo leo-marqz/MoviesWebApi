@@ -1,4 +1,5 @@
 ﻿using AutoMapper;
+using Microsoft.AspNetCore.Identity;
 using MoviesWebApi.DTOs;
 using MoviesWebApi.Entities;
 using NetTopologySuite;
@@ -14,6 +15,13 @@ namespace MoviesWebApi.Helpers
                 .ReverseMap();
             CreateMap<CreateGenre, Genre>();
             CreateMap<UpdateGenre, Genre>();
+
+            CreateMap<IdentityUser, DisplayUser>();
+
+            CreateMap<Review, DisplayReview>()
+                .ForMember(x => x.UserName, options => options.MapFrom(x => x.User.UserName));
+            CreateMap<CreateReview, Review>();
+            CreateMap<UpdateReview, Review>();
 
             //var geometryFactory = NtsGeometryServices.Instance.CreateGeometryFactory(srid: 4326);
             CreateMap<Cinema, DisplayCinema>()
