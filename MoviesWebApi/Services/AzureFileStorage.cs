@@ -8,7 +8,7 @@ namespace MoviesWebApi.Services
         private readonly string connectionString;
         public AzureFileStorage(IConfiguration configuration)
         {
-            this.connectionString = configuration.GetConnectionString("AzureStorage");
+            this.connectionString = configuration.GetConnectionString("AzureBlobStorage");
         }
 
         public async Task DeleteFile(string path, string container)

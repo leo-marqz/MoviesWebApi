@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using Microsoft.OpenApi.Models;
 using MoviesWebApi.Helpers;
 using MoviesWebApi.Services;
 using NetTopologySuite;
@@ -23,8 +24,8 @@ namespace MoviesWebApi
         public void ConfigureServices(IServiceCollection services)
         {
             services.AddAutoMapper(typeof(Startup));
-            //services.AddTransient<IFileStorage, AzureFileStorage>();
-            services.AddTransient<IFileStorage, LocalFileStorage>();
+            //services.AddTransient<IFileStorage, LocalStorage>();
+            services.AddTransient<IFileStorage, AzureFileStorage>();
             services.AddHttpContextAccessor();
             services.AddSingleton<GeometryFactory>(NtsGeometryServices.Instance.CreateGeometryFactory(srid: 4326));
 
@@ -41,7 +42,7 @@ namespace MoviesWebApi
 
             services.AddDbContext<ApplicationDbContext>(options =>
             {
-                options.UseSqlServer(Configuration.GetConnectionString("defaultConnection"), 
+                options.UseSqlServer(Configuration.GetConnectionString("DefaultConnection"), 
                     slqServerOptions => slqServerOptions.UseNetTopologySuite()
                     );
             });
@@ -68,6 +69,47 @@ namespace MoviesWebApi
                     };
                 });
 
+            //new - 20/01/2024
+            services.AddSwaggerGen((options) =>
+            {
+                options.SwaggerDoc("v1", new Microsoft.OpenApi.Models.OpenApiInfo
+                {
+                    Title = "Movie Api",
+                    Version = "v1.0.1",
+                    Contact = new Microsoft.OpenApi.Models.OpenApiContact
+                    {
+                        Name = "Leo Marqz",
+                        Email = "leomarqz2020@gmail.com"
+                    }
+                });
+
+                //configuracion de Swagger para manejar tokens jwt
+                options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+                {
+                    Name = "Authorization",
+                    Type = SecuritySchemeType.ApiKey,
+                    BearerFormat = "JWT",
+                    In = ParameterLocation.Header
+                });
+
+                options.AddSecurityRequirement(new OpenApiSecurityRequirement
+                {
+                    {
+                        new OpenApiSecurityScheme()
+                        {
+                            Reference = new OpenApiReference
+                            {
+                                Type = ReferenceType.SecurityScheme,
+                                Id = "Bearer"
+                            }
+                        },
+                        new string[]{}
+                    }
+                });
+            });
+
+            services.AddRouting(routing => routing.LowercaseUrls = true);
+
             services.AddEndpointsApiExplorer();
 
         }
@@ -76,6 +118,8 @@ namespace MoviesWebApi
         {
             if (env.IsDevelopment())
             {
+                app.UseSwagger();
+                app.UseSwaggerUI();
                 app.UseDeveloperExceptionPage();
             }
 

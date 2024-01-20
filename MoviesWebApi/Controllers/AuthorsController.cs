@@ -1,5 +1,6 @@
 ﻿using AutoMapper;
 using Azure;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.JsonPatch;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -42,6 +43,7 @@ namespace MoviesWebApi.Controllers
         }
 
         [HttpPost(Name = "createAuthor")]
+        [Authorize]
         public async Task<ActionResult> Post([FromForm] CreateAuthor createAuthor)
         {
             var author = mapper.Map<Author>(createAuthor);
