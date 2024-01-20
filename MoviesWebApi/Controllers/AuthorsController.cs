@@ -37,13 +37,12 @@ namespace MoviesWebApi.Controllers
         }
 
         [HttpGet("{id:int}", Name = "getAuthor")]
-        public async Task<ActionResult<DisplayAuthor>> Get([FromRoute] int id)
+        public async Task<ActionResult<DisplayAuthor>> Get([FromForm] int id)
         {
             return await Get<Author, DisplayAuthor>(id);
         }
 
         [HttpPost(Name = "createAuthor")]
-        [Authorize]
         public async Task<ActionResult> Post([FromForm] CreateAuthor createAuthor)
         {
             var author = mapper.Map<Author>(createAuthor);

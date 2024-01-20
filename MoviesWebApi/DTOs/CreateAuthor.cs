@@ -10,7 +10,7 @@ namespace MoviesWebApi.DTOs
         public string Name { get; set; }
         public DateTime DateOfBirth { get; set; }
         //leomarqz
-        [FileSizeValidation(maximunSizeMB: 4)]
+        [FileSizeValidation(maximunSizeMB: 10)]
         [FileTypeValidation(fileTypeGroup: FileTypeGroup.Image)]
         public IFormFile Photo { get; set; }
     }
